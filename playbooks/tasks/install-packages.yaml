@@ -1,0 +1,51 @@
+---
+- name: "Download Sawtooth repository Key"
+  apt_key:
+    keyserver: "{{ sawtooth_repo_keyserver }}"
+    id: "{{ sawtooth_repo_key }}"
+  when: sawtooth_use_nightly_repo | bool == false
+
+- name: "Download Sawtooth nightly repository Key"
+  apt_key:
+    keyserver: "{{ sawtooth_repo_keyserver }}"
+    id: "{{ sawtooth_nightly_repo_key }}"
+  when: sawtooth_use_nightly_repo | bool == true
+
+- name: "Add Sawtooth stable repository"
+  apt_repository:
+    repo: "deb [arch=amd64] http://repo.sawtooth.me/{{ sawtooth_repo }} bionic universe"
+    state: present
+    filename: sawtooth
+    update_cache: yes
+  when: sawtooth_use_nightly_repo | bool == false
+
+- name: "Add Sawtooth nightly repository"
+  apt_repository:
+    repo: "deb [arch=amd64] http://repo.sawtooth.me/{{ sawtooth_nightly_repo }} bionic universe"
+    state: present
+    filename: sawtooth
+    update_cache: yes
+  when: sawtooth_use_nightly_repo | bool == true
+
+- name: "Update the packages lists"
+  apt:
+    update_cache: yes
+
+- name: "Install the Sawtooth packages. Sawtooth consists of several Ubuntu packages that can be installed together using the sawtooth meta-package."
+  apt:
+    name: sawtooth
+    state: present
+
+- name: "Install the PBFT consensus engine package"
+  apt:
+    name: sawtooth-pbft-engine
+    state: present
+  when: sawtooth_consensus_engine == "PBFT"
+
+- name: "Install the PoET consensus engine, transaction processor, and CLI packages"
+  apt:
+    pkg:
+      - python3-sawtooth-poet-cli
+      - python3-sawtooth-poet-engine
+      - python3-sawtooth-poet-families
+  when: sawtooth_consensus_engine == "PoET"

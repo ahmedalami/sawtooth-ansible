@@ -1,0 +1,32 @@
+---
+- name: "Build the etc hosts file"
+  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].ansible_host}} {{item}}" state=present
+  with_items: "{{ groups['validators'] }}"
+
+- name: "Configure the validator"
+  template:
+    src: "templates/validator.toml.j2"
+    dest: "/etc/sawtooth/validator.toml"
+    owner: root
+    group: sawtooth
+    backup: yes
+  notify:
+      - start sawtooth-validator
+
+- name: "Configure the Sawtooth Commands"
+  template:
+    src: "templates/cli.toml.j2"
+    dest: "/etc/sawtooth/cli.toml"
+    owner: root
+    group: sawtooth
+    backup: yes
+
+- name: "Configure the Sawtooth Commands"
+  template:
+    src: "templates/rest_api.toml.j2"
+    dest: "/etc/sawtooth/rest_api.toml"
+    owner: root
+    group: sawtooth
+    backup: yes
+  notify:
+    - start sawtooth-rest-api

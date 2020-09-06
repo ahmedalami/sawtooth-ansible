@@ -1,0 +1,57 @@
+---
+- name: "Ensure Prerequisites"
+  apt:
+    pkg:
+    - python3-pip
+    - docker.io
+    - git
+
+- name: "Ensure prerequisites"
+  pip:
+    name: docker-py
+
+- name: "Ensure influxdb data directory is created"
+  file:
+    path: /var/lib/influx-data
+    state: directory
+
+- name: "Pulls influxdb Docker image"
+  docker_image:
+    name: influxdb
+    source: pull
+
+- name: "Start an InfluxDB Docker container"
+  docker_container:
+    name: sawtooth-stats-influxdb
+    image: influxdb
+    env:
+      INFLUXDB_DB: "metrics"
+      INFLUXDB_HTTP_AUTH_ENABLED: "true"
+      INFLUXDB_ADMIN_USER: "admin"
+      INFLUXDB_ADMIN_PASSWORD: "{{influxdb_admin_pw}}"
+      INFLUXDB_USER: "lrdata"
+      INFLUXDB_USER_PASSWORD: "{{influxdb_user_pw}}"
+    ports:
+    - "8086:8086"
+    volumes:
+    - "/var/lib/influx-data:/var/lib/influxdb"
+
+- name: "Install and Configure Grafana"
+  git:
+    repo: 'https://github.com/hyperledger/sawtooth-core.git'
+    dest: /tmp/sawtooth-core
+
+- name: "Build an sawtooth-stats-grafana docker image"
+  docker_image:
+    build:
+      path: /tmp/sawtooth-core/docker
+      dockerfile: grafana/sawtooth-stats-grafana
+      pull: false
+    name: sawtooth-stats-grafana
+    source: build
+
+- name: "Run the Grafana container"
+  command: docker run -d -p 3000:3000 --name sawtooth-stats-grafana sawtooth-stats-grafana
+  become: yes
+  args:
+    chdir: /tmp/sawtooth-core/docker

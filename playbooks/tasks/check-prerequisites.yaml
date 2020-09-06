@@ -1,0 +1,10 @@
+---
+- name: "For PBFT, the genesis block requires the validator keys for at least four nodes"
+  fail:
+    msg: "For PBFT, the genesis block requires the validator keys for at least four nodes"
+  when: "(groups['validators'] | length) < 4 and sawtooth_consensus_engine == 'PBFT'"
+
+- name: "For PoET, the genesis block requires the validator keys for at least three nodes"
+  fail:
+    msg: "For PoET, the genesis block requires the validator keys for at least three nodes"
+  when: "(groups['validators'] | length) < 3 and sawtooth_consensus_engine == 'PoET'"

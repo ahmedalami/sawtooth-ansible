@@ -1,0 +1,67 @@
+---
+- hosts: "network"
+  become: yes
+  tasks:
+  - name: "Check prerequisites"
+    include: "tasks/check-prerequisites.yaml"
+    tags:
+      - prerequisites
+      - sawtooth
+
+  - name: "Installing Hyperledger Sawtooth"
+    include: "tasks/install-packages.yaml"
+    tags:
+      - packages
+      - install
+      - sawtooth
+
+  - name: "Generating user and validator Keys"
+    include: "tasks/generate-keys.yaml"
+    tags:
+      - keys
+      - sawtooth
+
+- hosts: "validators"
+  become: yes
+  tasks:
+  - name: "Creating the Genesis Block"
+    include: "tasks/create-genesis-block.yaml"
+    tags:
+      - genesis
+      - sawtooth
+  - name: "Changing Off-chain Settings with Configuration Files"
+    include: "tasks/configure-settings.yaml"
+    tags:
+      - settings
+      - sawtooth
+  - name: "Running Sawtooth as a Service"
+    include: "tasks/start-services.yaml"
+    tags:
+      - services
+      - sawtooth
+  - name: "Using Grafana to Display Sawtooth Metrics"
+    include: "tasks/configure-metrics.yaml"
+    tags:
+      - metrics
+      - sawtooth
+
+  handlers:
+  - name: "start sawtooth-validator"
+    systemd:
+      state: restarted
+      enabled: True
+      daemon_reload: yes
+      name: sawtooth-validator
+  - name: "start sawtooth-rest-api"
+    systemd:
+      state: restarted
+      enabled: True
+      daemon_reload: yes
+      name: sawtooth-rest-api
+  - name: "start sawtooth-validator"
+    systemd:
+      state: restarted
+      enabled: True
+      daemon_reload: yes
+      name: sawtooth-validator
+
