@@ -1,0 +1,49 @@
+---
+- hosts: "network"
+  become: yes
+  tasks:
+    - name: "Disable and stop all services"
+      systemd: name={{ item }} state=stopped enabled=no
+      with_items:
+        - sawtooth-rest-api
+        - sawtooth-validator
+        - sawtooth-settings-tp
+        - sawtooth-identity-tp
+        - sawtooth-intkey-tp-python
+      tags:
+        - sawtooth
+        - uninstall
+
+    - name: "Disable and stop the consensus-related PBFT."
+      systemd: name={{ item }} state=stopped enabled=no
+      with_items:
+        - sawtooth-pbft-engine
+      when: sawtooth_consensus_engine == "PBFT"
+      tags:
+        - sawtooth
+        - uninstall
+
+    - name: "Disable and stop the consensus-related PoET."
+      systemd: name={{ item }} state=stopped enabled=no
+      with_items:
+        - sawtooth-poet-validator-registry-tp
+        - sawtooth-poet-engine
+      when: sawtooth_consensus_engine == "PoET"
+      tags:
+        - sawtooth
+        - uninstall
+
+    - name: "Remove sawtooth directories"
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /var/lib/sawtooth
+        - /var/log/sawtooth
+        - /etc/sawtooth/keys
+
+    - name: "Remove user keys"
+      become: false
+      file:
+        path: "/home/{{ ansible_user }}/.sawtooth"
+        state: absent

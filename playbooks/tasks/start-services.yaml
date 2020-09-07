@@ -2,7 +2,7 @@
 - name: "Start and enable the Sawtooth Services"
   systemd:
     name: "{{ item }}"
-    state: started
+    state: restarted
     enabled: yes
   with_items:
     - sawtooth-rest-api
@@ -14,16 +14,16 @@
 - name: "[PBFT] Start the consensus-related components as services."
   systemd:
     name: "{{ item }}"
-    state: started
+    state: restarted
     enabled: yes
   with_items:
     - sawtooth-pbft-engine
   when: sawtooth_consensus_engine == "PBFT"
-
+ls
 - name: "[PoET] Start the consensus-related components as services."
   systemd:
     name: "{{ item }}"
-    state: started
+    state: restarted
     enabled: yes
   with_items:
     - sawtooth-poet-validator-registry-tp
