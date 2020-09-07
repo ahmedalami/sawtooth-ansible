@@ -1,13 +1,23 @@
 ---
 - name: "Create a batch with a settings proposal for the genesis block in the first node"
   command: sawset genesis --key /home/{{ ansible_user }}/.sawtooth/keys/{{ sawtooth_user_key_name }}.priv -o /tmp/config-genesis.batch creates=/tmp/config-genesis.batch
-  when: inventory_hostname == groups['validators'][0]
+  when: inventory_hostname == groups['nodes'][0] and sawtooth_consensus_engine != "Devmode"
+
+- name: "[Devmode] Create a batch with a settings proposal for the genesis block in the first node"
+  command: sawset genesis --key /home/{{ ansible_user }}/.sawtooth/keys/{{ sawtooth_user_key_name }}.priv -o /tmp/config-genesis.batch creates=/tmp/config-genesis.batch
+  when: sawtooth_consensus_engine == "Devmode"
+
+- name: "[Devmode] Create a batch to initialize the consensus settings"
+  command:
+    cmd: "sawset proposal create --key /home/{{ ansible_user }}/.sawtooth/keys/{{ sawtooth_user_key_name }}.priv -o /tmp/config-consensus.batch sawtooth.consensus.algorithm.name=Devmode sawtooth.consensus.algorithm.version=1.0"
+    creates: /tmp/config-consensus.batch
+  when: inventory_hostname == groups['nodes'][0] and sawtooth_consensus_engine == "Devmode"
 
 - name: "Ensure network key directories already exist"
   file:
     path: /etc/sawtooth/keys/{{ sawtooth_network_name }}/network/{{ inventory_hostname }}
     state: directory
-  delegate_to: "{{groups['validators'][0]}}"
+  delegate_to: "{{groups['nodes'][0]}}"
   when: sawtooth_consensus_engine == "PBFT"
 
 - name: "Fetch the network public keys locally"
@@ -22,33 +32,40 @@
   copy:
     src: /tmp/sawtooth-{{ inventory_hostname }}.pub
     dest: /etc/sawtooth/keys/{{ sawtooth_network_name }}/network/{{ inventory_hostname }}/validator.pub
-  delegate_to: "{{groups['validators'][0]}}"
-  when: inventory_hostname != groups['validators'][0] and sawtooth_consensus_engine == "PBFT"
+  delegate_to: "{{groups['nodes'][0]}}"
+  when: inventory_hostname != groups['nodes'][0] and sawtooth_consensus_engine == "PBFT"
 
 - name: "[PBFT] Create a batch to initialize the consensus settings"
   command:
     cmd: "sawset proposal create --key /home/{{ ansible_user }}/.sawtooth/keys/{{ sawtooth_user_key_name }}.priv -o /tmp/config-consensus.batch sawtooth.consensus.algorithm.name=pbft sawtooth.consensus.algorithm.version=1.0 sawtooth.consensus.pbft.members='{{ argument }}'"
     creates: /tmp/config-consensus.batch
-  when: inventory_hostname == groups['validators'][0] and sawtooth_consensus_engine == "PBFT"
+  when: inventory_hostname == groups['nodes'][0] and sawtooth_consensus_engine == "PBFT"
   vars:
-    argument: "[{{ ['\"/etc/sawtooth/keys/' + sawtooth_network_name + '/network']| product(groups['validators']) | map('join', '/') | list | product(['validator.pub']) | map('join', '/') | join('\",') }}]"
+    argument: "[{{ ['\"/etc/sawtooth/keys/' + sawtooth_network_name + '/network']| product(groups['nodes']) | map('join', '/') | list | product(['validator.pub']) | map('join', '/') | join('\",') }}]"
 
 - name: "[PoET] Create a batch to initialize the consensus settings"
   command:
     cmd: "sawset proposal create --key /home/{{ ansible_user }}/.sawtooth/keys/{{ sawtooth_user_key_name }}.priv -o /tmp/config-consensus.batch sawtooth.consensus.algorithm.name=PoET sawtooth.consensus.algorithm.version=0.1 sawtooth.poet.report_public_key_pem='$(cat /etc/sawtooth/simulator_rk_pub.pem)' sawtooth.poet.valid_enclave_measurements=$(poet enclave measurement) sawtooth.poet.valid_enclave_basenames=$(poet enclave basename)"
     creates: /tmp/config-consensus.batch
-  when: inventory_hostname == groups['validators'][0] and sawtooth_consensus_engine == "PoET"
+  when: inventory_hostname == groups['nodes'][0] and sawtooth_consensus_engine == "PoET"
 
 - name: "[PBFT] As the sawtooth user, combine the separate batches into a single genesis batch that will be committed in the genesis block."
   become_user: sawtooth
   command:
     cmd: "sawadm genesis /tmp/config-genesis.batch /tmp/config-consensus.batch"
     creates: /var/lib/sawtooth/genesis.batch
-  when: inventory_hostname == groups['validators'][0] and sawtooth_consensus_engine == "PBFT"
+  when: inventory_hostname == groups['nodes'][0] and sawtooth_consensus_engine == "PBFT"
 
 - name: "[PoET] As the sawtooth user, combine the separate batches into a single genesis batch that will be committed in the genesis block."
   become_user: sawtooth
   command:
     cmd: "sawadm genesis /tmp/config-genesis.batch /tmp/config-consensus.batch /tmp/poet.batch"
     creates: /var/lib/sawtooth/genesis.batch
-  when: inventory_hostname == groups['validators'][0] and sawtooth_consensus_engine == "PoET"
+  when: inventory_hostname == groups['nodes'][0] and sawtooth_consensus_engine == "PoET"
+
+- name: "[Devmode] As the sawtooth user, combine the separate batches into a single genesis batch that will be committed in the genesis block."
+  become_user: sawtooth
+  command:
+    cmd: "sawadm genesis /tmp/config-genesis.batch /tmp/config-consensus.batch"
+    creates: /var/lib/sawtooth/genesis.batch
+  when: sawtooth_consensus_engine == "Devmode"

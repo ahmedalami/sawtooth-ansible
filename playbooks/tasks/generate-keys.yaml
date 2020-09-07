@@ -3,6 +3,12 @@
   become: false
   command: sawtooth keygen {{ sawtooth_user_key_name }} creates="/home/{{ ansible_user }}/.sawtooth/keys/{{ sawtooth_user_key_name }}.priv"
 
+- name: "Ensure keys directory already exist"
+  file:
+    path: /etc/sawtooth/keys
+    state: directory
+  when: sawtooth_consensus_engine == "Devmode"
+
 - name: "Generate the key for the validator, which runs as root"
   become_user: root
   command: sawadm keygen creates="/etc/sawtooth/keys/validator.priv"

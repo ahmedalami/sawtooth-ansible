@@ -1,5 +1,5 @@
 ---
-- hosts: "network"
+- hosts: "nodes"
   become: yes
   tasks:
   - name: "Check prerequisites"
@@ -21,29 +21,32 @@
       - keys
       - sawtooth
 
-- hosts: "validators"
-  become: yes
-  tasks:
   - name: "Creating the Genesis Block"
     include: "tasks/create-genesis-block.yaml"
     tags:
       - genesis
       - sawtooth
+
   - name: "Changing Off-chain Settings with Configuration Files"
     include: "tasks/configure-settings.yaml"
     tags:
       - settings
       - sawtooth
+    when: sawtooth_consensus_engine != 'Devmode'
+
   - name: "Running Sawtooth as a Service"
     include: "tasks/start-services.yaml"
     tags:
       - services
       - sawtooth
+    when: sawtooth_consensus_engine != 'Devmode'
+
   - name: "Using Grafana to Display Sawtooth Metrics"
     include: "tasks/configure-metrics.yaml"
     tags:
       - metrics
       - sawtooth
+    when: sawtooth_consensus_engine != 'Devmode'
 
   handlers:
   - name: "start sawtooth-validator"

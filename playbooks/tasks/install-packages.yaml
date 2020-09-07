@@ -49,3 +49,9 @@
       - python3-sawtooth-poet-engine
       - python3-sawtooth-poet-families
   when: sawtooth_consensus_engine == "PoET"
+
+- name: "Install the Devmode consensus engine"
+  apt:
+    pkg:
+      - sawtooth-devmode-engine-rust
+  when: sawtooth_consensus_engine == "Devmode"

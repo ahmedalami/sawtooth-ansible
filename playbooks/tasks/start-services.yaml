@@ -5,11 +5,19 @@
     state: restarted
     enabled: yes
   with_items:
-    - sawtooth-rest-api
     - sawtooth-validator
+    - sawtooth-rest-api
     - sawtooth-settings-tp
-    - sawtooth-identity-tp
     - sawtooth-intkey-tp-python
+
+- name: "Start and enable the non Devmode Sawtooth Services"
+  systemd:
+    name: "{{ item }}"
+    state: restarted
+    enabled: yes
+  with_items:
+    - sawtooth-identity-tp
+  when: sawtooth_consensus_engine != "Devmode"
 
 - name: "[PBFT] Start the consensus-related components as services."
   systemd:
@@ -19,7 +27,7 @@
   with_items:
     - sawtooth-pbft-engine
   when: sawtooth_consensus_engine == "PBFT"
-ls
+
 - name: "[PoET] Start the consensus-related components as services."
   systemd:
     name: "{{ item }}"
